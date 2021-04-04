@@ -134,6 +134,8 @@ class __HeaderState extends State<_Header> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -146,6 +148,7 @@ class __HeaderState extends State<_Header> {
             widget.logoPath,
             filterQuality: FilterQuality.high,
             height: logoHeight,
+            width: 250,
           )
         : NullWidget();
 
@@ -217,7 +220,7 @@ class FlutterLogin extends StatefulWidget {
     this.onSubmitAnimationCompleted,
     this.logoTag,
     this.titleTag,
-    this.showDebugButtons = false,
+    this.showDebugButtons = false, this.showForgotPassword, this.showSignUpButton, this.userName, this.password, this.rememberMe,
   }) : super(key: key);
 
   /// Called when the user hit the submit button when in sign up mode
@@ -269,6 +272,17 @@ class FlutterLogin extends StatefulWidget {
   /// passed in
   final bool showDebugButtons;
 
+  final bool showForgotPassword;
+
+  final bool showSignUpButton;
+
+  final String userName;
+
+  final String password;
+
+  final bool rememberMe;
+
+
   static final FormFieldValidator<String> defaultEmailValidator = (value) {
     if (value.isEmpty || !Regex.email.hasMatch(value)) {
       return 'Invalid email!';
@@ -284,10 +298,10 @@ class FlutterLogin extends StatefulWidget {
   };
 
   @override
-  _FlutterLoginState createState() => _FlutterLoginState();
+  FlutterLoginState createState() => FlutterLoginState();
 }
 
-class _FlutterLoginState extends State<FlutterLogin>
+class FlutterLoginState extends State<FlutterLogin>
     with TickerProviderStateMixin {
   final GlobalKey<AuthCardState> authCardKey = GlobalKey();
   static const loadingDuration = const Duration(milliseconds: 400);
@@ -295,10 +309,23 @@ class _FlutterLoginState extends State<FlutterLogin>
   AnimationController _logoController;
   AnimationController _titleController;
   double _selectTimeDilation = 1.0;
+  bool _showForgotPassword = true;
+  bool _showSignUpButton = true;
+  String _userName;
+  String _password;
 
   @override
   void initState() {
     super.initState();
+
+    if(widget.showForgotPassword != null)
+      _showForgotPassword = widget.showForgotPassword;
+
+    if(widget.showSignUpButton != null)
+      _showSignUpButton = widget.showSignUpButton;
+
+    _userName = widget.userName;
+    _password = widget.password;
 
     _loadingController = AnimationController(
       vsync: this,
@@ -345,7 +372,8 @@ class _FlutterLoginState extends State<FlutterLogin>
   }
 
   Widget _buildHeader(double height, LoginTheme loginTheme) {
-    return _Header(
+
+    return  _Header(
       logoController: _logoController,
       titleController: _titleController,
       height: height,
@@ -527,6 +555,16 @@ class _FlutterLoginState extends State<FlutterLogin>
     );
   }
 
+  void submit()
+  {
+    setState(() {
+      forceHideHeader = true;
+    });
+    authCardKey.currentState.submit();
+  }
+
+  bool forceHideHeader = false;
+
   @override
   Widget build(BuildContext context) {
     final loginTheme = widget.theme ?? LoginTheme();
@@ -581,11 +619,16 @@ class _FlutterLoginState extends State<FlutterLogin>
                         passwordValidator: passwordValidator,
                         onSubmit: _reverseHeaderAnimation,
                         onSubmitCompleted: widget.onSubmitAnimationCompleted,
+                        showForgotPassword: _showForgotPassword,
+                        showSignUpButton: _showSignUpButton,
+                        userName: _userName,
+                        password: _password,
+                        rememberMe: widget.rememberMe,
                       ),
                     ),
                     Positioned(
                       top: cardTopPosition - headerHeight - headerMargin,
-                      child: _buildHeader(headerHeight, loginTheme),
+                      child:  _buildHeader(headerHeight, loginTheme),
                     ),
                   ],
                 ),

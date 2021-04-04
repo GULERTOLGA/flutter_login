@@ -18,6 +18,7 @@ import '../dart_helper.dart';
 import '../matrix.dart';
 import '../paddings.dart';
 import '../widget_helper.dart';
+import 'package:flutter_switch/flutter_switch.dart';
 
 class AuthCard extends StatefulWidget {
   AuthCard({
@@ -27,7 +28,8 @@ class AuthCard extends StatefulWidget {
     this.emailValidator,
     this.passwordValidator,
     this.onSubmit,
-    this.onSubmitCompleted,
+    this.rememberMe,
+    this.onSubmitCompleted, this.showForgotPassword, this.showSignUpButton, this.userName, this.password,
   }) : super(key: key);
 
   final EdgeInsets padding;
@@ -36,17 +38,23 @@ class AuthCard extends StatefulWidget {
   final FormFieldValidator<String> passwordValidator;
   final Function onSubmit;
   final Function onSubmitCompleted;
+  final bool showForgotPassword;
+  final bool showSignUpButton;
+  final bool rememberMe;
+  final String userName;
+  final String password;
 
   @override
   AuthCardState createState() => AuthCardState();
 }
 
 class AuthCardState extends State<AuthCard> with TickerProviderStateMixin {
-  GlobalKey _cardKey = GlobalKey();
+  GlobalKey<LoginCardState> _cardKey = GlobalKey<LoginCardState>();
 
   var _isLoadingFirstTime = true;
   var _pageIndex = 0;
   static const cardSizeScaleEnd = .2;
+
 
   TransformerPageController _pageController;
   AnimationController _formLoadingController;
@@ -59,11 +67,16 @@ class AuthCardState extends State<AuthCard> with TickerProviderStateMixin {
   Animation<double> _cardOverlayHeightFactorAnimation;
   Animation<double> _cardOverlaySizeAndOpacityAnimation;
 
+  void submit(){
+    _cardKey.currentState.submit();
+  }
+
   @override
   void initState() {
     super.initState();
 
     _pageController = TransformerPageController();
+
 
     widget.loadingController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -288,6 +301,11 @@ class AuthCardState extends State<AuthCard> with TickerProviderStateMixin {
                         : (_formLoadingController..value = 1.0),
                     emailValidator: widget.emailValidator,
                     passwordValidator: widget.passwordValidator,
+                    showForgotPassword: widget.showForgotPassword,
+                    showSignUpButton: widget.showSignUpButton,
+                    userName: widget.userName,
+                    password: widget.password,
+                    rememberMe: widget.rememberMe,
                     onSwitchRecoveryPassword: () => _switchRecovery(true),
                     onSubmitCompleted: () {
                       _forwardChangeRouteAnimation().then((_) {
@@ -333,7 +351,8 @@ class _LoginCard extends StatefulWidget {
     @required this.passwordValidator,
     @required this.onSwitchRecoveryPassword,
     this.onSwitchAuth,
-    this.onSubmitCompleted,
+    this.rememberMe,
+    this.onSubmitCompleted, this.showForgotPassword, this.showSignUpButton, this.userName, this.password,
   }) : super(key: key);
 
   final AnimationController loadingController;
@@ -342,16 +361,27 @@ class _LoginCard extends StatefulWidget {
   final Function onSwitchRecoveryPassword;
   final Function onSwitchAuth;
   final Function onSubmitCompleted;
+  final bool showForgotPassword;
+  final bool showSignUpButton;
+  final bool rememberMe;
+  final String userName;
+  final String password;
 
   @override
-  _LoginCardState createState() => _LoginCardState();
+  LoginCardState createState() => LoginCardState();
 }
 
-class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
+class LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
   final GlobalKey<FormState> _formKey = GlobalKey();
 
   final _passwordFocusNode = FocusNode();
   final _confirmPasswordFocusNode = FocusNode();
+
+  bool _showForgotPassword = true;
+  bool _showSignUpButton = true;
+  bool _rememberMe = false;
+
+
 
   TextEditingController _nameController;
   TextEditingController _passController;
@@ -378,10 +408,28 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
+    if(widget.showForgotPassword != null)
+      _showForgotPassword = widget.showForgotPassword;
+
+
+    if(widget.showSignUpButton != null)
+      _showSignUpButton = widget.showSignUpButton;
+
+    _rememberMe = widget.rememberMe != null  ? widget.rememberMe : false;
+
     final auth = Provider.of<Auth>(context, listen: false);
     _nameController = TextEditingController(text: auth.email);
     _passController = TextEditingController(text: auth.password);
     _confirmPassController = TextEditingController(text: auth.confirmPassword);
+
+
+    if(widget.userName!= null && widget.userName.isNotEmpty)
+      _nameController.text = widget.userName;
+
+
+    if(widget.password!= null && widget.password.isNotEmpty)
+      _passController.text = widget.password;
+
 
     _loadingController = widget.loadingController ??
         (AnimationController(
@@ -449,7 +497,7 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
     }
   }
 
-  Future<bool> _submit() async {
+  Future<bool> submit() async {
     // a hack to force unfocus the soft keyboard. If not, after change-route
     // animation completes, it will trigger rebuilding this widget and show all
     // textfields and buttons again before going to new route
@@ -469,11 +517,13 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
       error = await auth.onLogin(LoginData(
         name: auth.email,
         password: auth.password,
+        rememberMe: _rememberMe
       ));
     } else {
       error = await auth.onSignup(LoginData(
         name: auth.email,
         password: auth.password,
+        rememberMe: _rememberMe
       ));
     }
 
@@ -529,7 +579,7 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
       focusNode: _passwordFocusNode,
       onFieldSubmitted: (value) {
         if (auth.isLogin) {
-          _submit();
+          submit();
         } else {
           // SignUp
           FocusScope.of(context).requestFocus(_confirmPasswordFocusNode);
@@ -551,7 +601,7 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
       controller: _confirmPassController,
       textInputAction: TextInputAction.done,
       focusNode: _confirmPasswordFocusNode,
-      onFieldSubmitted: (value) => _submit(),
+      onFieldSubmitted: (value) => submit(),
       validator: auth.isSignup
           ? (value) {
               if (value != _passController.text) {
@@ -591,7 +641,7 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
       child: AnimatedButton(
         controller: _submitController,
         text: auth.isLogin ? messages.loginButton : messages.signupButton,
-        onPressed: _submit,
+        onPressed: submit,
       ),
     );
   }
@@ -615,6 +665,8 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
       ),
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -668,9 +720,38 @@ class _LoginCardState extends State<_LoginCard> with TickerProviderStateMixin {
             width: cardWidth,
             child: Column(
               children: <Widget>[
-                _buildForgotPassword(theme, messages),
+                FadeIn(
+                  controller: _loadingController,
+                  fadeDirection: FadeDirection.bottomToTop,
+                  offset: .5,
+                  curve: _textButtonLoadingAnimationInterval,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        FlutterSwitch(
+                          value: _rememberMe,
+                          onToggle: (val) {
+                            setState(() {
+                              _rememberMe = val;
+                            });
+                          },
+                        ),
+                        Container(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            "Beni hatırla",
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10.0,),
+                Visibility(visible: _showForgotPassword,  child:_buildForgotPassword(theme, messages)),
                 _buildSubmitButton(theme, messages, auth),
-                _buildSwitchAuthButton(theme, messages, auth),
+                Visibility(visible: _showSignUpButton,  child:_buildSwitchAuthButton(theme, messages, auth)),
               ],
             ),
           ),

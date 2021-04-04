@@ -4,10 +4,12 @@ import 'package:quiver/core.dart';
 class LoginData {
   final String name;
   final String password;
+  final bool rememberMe;
 
   LoginData({
     @required this.name,
     @required this.password,
+    @required this.rememberMe,
   });
 
   @override
